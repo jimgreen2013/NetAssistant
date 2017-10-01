@@ -20,15 +20,15 @@ MainWindow::MainWindow(QWidget *parent) :
     /* 设置默认通讯模式 */
     ui->tcpclient_radioButton->setChecked(true);
     /** 目前设置为UDP为默认方式 */
-    ui->udp_radioButton->setChecked(true);
+//    ui->udp_radioButton->setChecked(true);
     /** 设置远程主机IP地址 获取本机IP */
     ui->remoteIP_lineEdit->setText(mRemoteIp);
     /* 设置远程端口号 */
     /* TODO: 将其设置为不能以0开头 */
-    ui->remoteport_spinBox->setRange(1024,9999);
+    ui->remoteport_spinBox->setRange(1024,99999);
     ui->remoteport_spinBox->setValue(mRemotePort);
     /* 设置本地端口号 */
-    ui->localport_spinBox->setRange(1024,9999);
+    ui->localport_spinBox->setRange(1024,99999);
     ui->localport_spinBox->setValue(mLocalPort);
 
     isConnect = false;
@@ -80,6 +80,10 @@ MainWindow::MainWindow(QWidget *parent) :
             SIGNAL(updateState(QString, QVariant, QVariant)),
             this, SLOT(updateStateBar(QString, QVariant, QVariant)));
 
+    // tcp client
+    tcpClient = new QTcpSocket(this);
+    connect(tcpClient, &QTcpSocket::readyRead, this, &MainWindow::tcpReadyRead);
+
     init();
 
     mReceiveNum = mSendNum = 0;
@@ -113,7 +117,13 @@ void MainWindow::connectNet()
     // 使能button
     ui->handSend_pushButton->setEnabled(true);
 
-    client.udpStart(chelper.getLocalHostIP(), mLocalPort, QHostAddress(mRemoteIp), mRemotePort);
+    if (ui->udp_radioButton->isChecked()){
+        client.udpStart(chelper.getLocalHostIP(), mLocalPort, QHostAddress(mRemoteIp), mRemotePort);
+    } else if (ui->tcpclient_radioButton->isChecked()){
+        tcpClient->abort();
+        tcpClient->connectToHost(QHostAddress(mRemoteIp), mRemotePort);
+        tcpClient->write("hello sansa~");
+    }
 }
 
 void MainWindow::updateReceiveText(const QString string)
@@ -184,6 +194,7 @@ void MainWindow::init()
     ui->handSend_pushButton->setEnabled(false);
     //
     client.udpStop(NULL, NULL, NULL);
+    tcpClient->abort();
 
     updateStateBar("本地IP: " + chelper.getLocalHostIP().toString() + " 无连接",
                    QVariant(QVariant::Int), QVariant(QVariant::Int));
@@ -215,7 +226,7 @@ void MainWindow::disConnectNet()
     ui->handSend_pushButton->setEnabled(false);
     //
     client.udpStop(NULL, NULL, NULL);
-
+    tcpClient->abort();
 
     updateStateBar(tr("UDP通信停止"), QVariant(QVariant::Int), QVariant(QVariant::Int));
 }
@@ -294,4 +305,11 @@ void MainWindow::on_handSend_pushButton_released()
 void MainWindow::on_quit_pushButton_released()
 {
     QApplication::quit();
+}
+
+void MainWindow::tcpReadyRead()
+{
+    QByteArray data = tcpClient->readAll();
+    QString  string = QString::fromUtf8(data);
+    ui->receive_textBrowser->setText(string + "\n");
 }

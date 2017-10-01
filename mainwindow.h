@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QUdpSocket>
+#include <QTcpSocket>
 #include <QLabel>
 #include <QPushButton>
 #include "udpclient.h"
@@ -29,10 +30,12 @@ private slots:
     void on_clearCounter_pushButton_released();
     void on_quit_pushButton_released();
     void updateStateBar(QString state, QVariant inNum, QVariant outNum);
+    void tcpReadyRead();
 
 private:
     Ui::MainWindow *ui;
     QUdpSocket *udpSocket;
+    QTcpSocket *tcpClient;
     void connectNet();
     void disConnectNet();
     bool isConnect;
